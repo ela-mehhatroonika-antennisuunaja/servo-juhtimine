@@ -1,4 +1,5 @@
 #include <Servo.h> 
+#include <ArduinoJson.h>
 
 //1 pwm = 0.2025 kraad
 //5 pwm = 1 kraad
@@ -13,8 +14,14 @@ int vertpwm;
 Servo servohoris;
 Servo servovert;
 
+struct guidanceinfo{
+  float hor_dir;
+  float vert_dir;
+  float initialbear;
+};
+
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   servohoris.attach(9);
   servovert.attach(11);
   //servohoris.writeMicroseconds(1500);  // set servo to mid-point
@@ -62,10 +69,29 @@ void endtoend() {
   delay(8000);
 
 }
+guidanceinfo getdata(){
+  guidanceinfo data;
+  if (Serial.available() >= sizeof(float)*3){
+    float hor_dir, vert_dir, initialbear;
+    Serial.readBytes((char *)&hor_dir, sizeof(float));
+    Serial.readBytes((char *)&vert_dir, sizeof(float));
+    Serial.readBytes((char *)&initialbear, sizeof(float));
+    data.hor_dir = hor_dir;
+    data.vert_dir = vert_dir;
+    data.initialbear = initialbear;
+  }
+  return data;
+}
 
-
+void senddataback(guidanceinfo data){
+  Serial.println(data.hor_dir);
+}
 void loop() {
-  endtoend();
+  guidanceinfo data;
+  //endtoend();
+  data = getdata();
+  senddataback(data);
+
   //turnhoriz(0);
   //turnvert(0);
 } 
