@@ -10,9 +10,10 @@
 
 int horpwm;
 int vertpwm;
-
 Servo servohoris;
 Servo servovert;
+
+String data;
 
 struct guidanceinfo{
   float hor_dir;
@@ -28,21 +29,28 @@ void setup() {
   //servovert.writeMicroseconds(500);
 } 
 
-void turnhoriz(int angle) {
-  if (angle > 202) {
-    angle = 202;
+void turnhoriz(guidanceinfo data) {
+  float corr;
+  float angle = data.hor_dir;
+  float init = data.initialbear;
+
+  corr = 101 + init - angle;
+
+  if (corr > 202) {
+    corr = 202;
   }
 
-  if (angle < 0) {
-    angle = 0;
+  if (corr < 0) {
+    corr = 0;
   }
 
-  int pwm = map(angle, 0, 202, 1000, 1998);
-  Serial.println("Horisontaalne nurk: " + String(angle) + "Pwm: "+ String(pwm));
+  int pwm = map(corr, 0, 202, 1000, 1998);
+  //Serial.println("Horisontaalne nurk: " + String(angle) + "Pwm: "+ String(pwm));
   servohoris.writeMicroseconds(pwm);
 }
 
-void turnvert(int angle) { //500 min max 2500
+void turnvert(guidanceinfo data) { //500 min max 2500
+  int angle = data.vert_dir;
   if (angle > 90) {
     angle = 90;
   }
@@ -52,7 +60,7 @@ void turnvert(int angle) { //500 min max 2500
   }
 
   int pwm = map(angle, 0, 90, 500, 2500);
-  Serial.println("Vert nurk: " + String(angle) + "Pwm: "+ String(pwm));
+  //Serial.println("Vert nurk: " + String(angle) + "Pwm: "+ String(pwm));
   servovert.writeMicroseconds(pwm);
 }
 
@@ -69,29 +77,41 @@ void endtoend() {
   delay(8000);
 
 }
-guidanceinfo getdata(){
-  guidanceinfo data;
-  if (Serial.available() >= sizeof(float)*3){
-    float hor_dir, vert_dir, initialbear;
-    Serial.readBytes((char *)&hor_dir, sizeof(float));
-    Serial.readBytes((char *)&vert_dir, sizeof(float));
-    Serial.readBytes((char *)&initialbear, sizeof(float));
-    data.hor_dir = hor_dir;
-    data.vert_dir = vert_dir;
-    data.initialbear = initialbear;
-  }
-  return data;
-}
 
 void senddataback(guidanceinfo data){
   Serial.println(data.hor_dir);
+  //Serial.println("tere");
 }
+
+guidanceinfo recmessage (){
+  guidanceinfo data;
+  if (Serial.available()) {
+    // Read the incoming data until newline character '\n'
+    String json_str = Serial.readStringUntil('\n');
+    
+    // Parse the JSON data
+    DynamicJsonDocument json_doc(1024);
+    DeserializationError error = deserializeJson(json_doc, json_str);
+    
+    // Check if parsing was successful
+    if (!error) {
+      data.hor_dir = json_doc["hor_dir"];
+      data.vert_dir = json_doc["vert_dir"];
+      data.initialbear = json_doc["initialbear"];
+      //senddataback(data);
+      return(data);
+
+    } else {
+      // Print an error message if parsing failed
+      Serial.print("Parsing failed: ");
+      Serial.println(error.c_str());
+    }
+  }
+}
+
 void loop() {
   guidanceinfo data;
-  //endtoend();
-  data = getdata();
-  senddataback(data);
-
-  //turnhoriz(0);
-  //turnvert(0);
+  data = recmessage();
+  turnhoriz(data);
+  turnvert(data);
 } 
