@@ -1,17 +1,23 @@
 #include <Servo.h> 
 #include <ArduinoJson.h>
+#include <Wire.h>
+#include <HMC5883L_Simple.h>
 
+/*
 //1 pwm = 0.2025 kraad
 //5 pwm = 1 kraad
 // max pööre 202.5 kraadi ehk 101.25 mõlemale poole
 
-// juhe nr 1 horisontaalne liikumine - PIN 9
-// juhe nr 2 vertikaalne - PIN 11
-
+juhe nr 1 horisontaalne liikumine - PIN 9
+juhe nr 2 vertikaalne - PIN 11
+*/
+bool man_compass_setup = false;
 int horpwm;
 int vertpwm;
+float heading;
 Servo servohoris;
 Servo servovert;
+HMC5883L_Simple Compass;
 
 String data;
 
@@ -23,10 +29,16 @@ struct guidanceinfo{
 
 void setup() {
   Serial.begin(9600);
+  Wire.begin();
+  Compass.SetDeclination(10, 10, 'E');
+  Compass.SetSamplingMode(COMPASS_SINGLE);
+  Compass.SetScale(COMPASS_SCALE_130);
+  Compass.SetOrientation(COMPASS_HORIZONTAL_X_NORTH);
   servohoris.attach(9);
   servovert.attach(11);
-  //servohoris.writeMicroseconds(1500);  // set servo to mid-point
-  //servovert.writeMicroseconds(500);
+  servohoris.writeMicroseconds(1500);  // set servo to mid-point
+  servovert.writeMicroseconds(500);
+  delay(15000);
 } 
 
 void turnhoriz(guidanceinfo data) {
@@ -34,17 +46,21 @@ void turnhoriz(guidanceinfo data) {
   float angle = data.hor_dir;
   float init = data.initialbear;
 
-  corr = 101 + init - angle;
+  corr = 101 + angle - init;
+
+  if(corr > 360){
+    corr = corr - 360;
+  }
 
   if (corr > 202) {
     corr = 202;
   }
 
   if (corr < 0) {
-    corr = 0;
+    corr = 1;
   }
 
-  int pwm = map(corr, 0, 202, 1000, 1998);
+  int pwm = map(corr, 0, 202, 1998, 1000);
   //Serial.println("Horisontaalne nurk: " + String(angle) + "Pwm: "+ String(pwm));
   servohoris.writeMicroseconds(pwm);
 }
@@ -112,6 +128,15 @@ guidanceinfo recmessage (){
 void loop() {
   guidanceinfo data;
   data = recmessage();
+
+  if (man_compass_setup == false && data.initialbear < 0){ //käsitsi kompass
+    heading = Compass.GetHeadingDegrees();
+    man_compass_setup = true;
+  }
+  
+  if(data.initialbear < 0){
+    data.initialbear = heading;
+  }
   turnhoriz(data);
   turnvert(data);
 } 
