@@ -45,6 +45,12 @@ void turnhoriz(guidanceinfo data) {
   float corr;
   float angle = data.hor_dir;
   float init = data.initialbear;
+  
+  if(man_compass_setup == true){
+    float init = heading;
+  } else {
+    float init = data.initialbear;
+  }
 
   corr = 101 + angle - init;
 
