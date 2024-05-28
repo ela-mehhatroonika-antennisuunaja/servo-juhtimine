@@ -36,9 +36,8 @@ void setup() {
   Compass.SetOrientation(COMPASS_HORIZONTAL_X_NORTH);
   servohoris.attach(9);
   servovert.attach(11);
-  servohoris.writeMicroseconds(1500);  // set servo to mid-point
+  servohoris.writeMicroseconds(1530);  // set servo to mid-point
   servovert.writeMicroseconds(500);
-  delay(15000);
 } 
 
 void turnhoriz(guidanceinfo data) {
@@ -52,25 +51,35 @@ void turnhoriz(guidanceinfo data) {
     float init = data.initialbear;
   }
 
-  corr = 101 + angle - init;
+  corr = getHeadingError(angle, init);
 
-  if(corr > 360){
-    corr = corr - 360;
+  if (corr > 114) {
+    corr = 114;
   }
 
-  if (corr > 202) {
-    corr = 202;
+  if (corr < -114) {
+    corr = -114;
   }
 
-  if (corr < 0) {
-    corr = 1;
-  }
-
-  int pwm = map(corr, 0, 202, 1998, 1000);
+  int pwm = map(corr, -114, 114, 2100, 960);
   //Serial.println("Horisontaalne nurk: " + String(angle) + "Pwm: "+ String(pwm));
   servohoris.writeMicroseconds(pwm);
 }
 
+float getHeadingError(int angle, int init){
+  float corr = angle - init;
+  float abscorr = abs(corr);
+
+  if (abscorr == 180){
+    return abscorr;
+  } else if (abscorr < 180){
+    return corr;
+  } else if (angle > init){
+    return (abscorr - 360);
+  } else {
+    return (360 - abscorr);
+  }
+}
 void turnvert(guidanceinfo data) { //500 min max 2500
   int angle = data.vert_dir;
   if (angle > 90) {
@@ -100,7 +109,7 @@ void endtoend() {
 
 }
 
-void senddataback(guidanceinfo data){
+void senddataback(guidanceinfo data){ //ei kasutata
   Serial.println(data.hor_dir);
   //Serial.println("tere");
 }
