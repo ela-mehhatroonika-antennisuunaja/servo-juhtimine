@@ -8,3 +8,4 @@ Arduino võtab andmeid sisse JSON kujul:
 ```
 Kõik nurgad kraadides (ja hetkel täisarvud).
 Seega saab suunajale kergesti tekitada uusi rakendusi, sest liigutamiseks võtab sisendina ainult kolm nurka.
+baudrate = 9600
